@@ -1,4 +1,4 @@
-package clients
+package statements
 
 import (
 	"main/dto"
@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Statement(c *fiber.Ctx) error {
+func GetStatement(c *fiber.Ctx) error {
 
 	id := string(c.Request().Header.Peek("id_client"))
 
