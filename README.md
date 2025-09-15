@@ -1,0 +1,1 @@
+curl -X POST 0.0.0.0:8080/transactions -H "id_client: 8e9a2b81-4d9d-4b77-91eb-3cd51ce1c104" -H "Content-type: application/json" -d '{"amount": 100, "type": "c", "description": "teste"}'

@@ -1,0 +1,59 @@
+version: '3.8'
+services:
+
+  redis:
+    image: redis:7.2.4
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "50M"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    container_name: db
+    environment:
+      POSTGRES_DB: transactions
+      POSTGRES_USER: fidelissauro
+      POSTGRES_PASSWORD: doutorequemtemdoutorado
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: "0.4"
+          memory: "150M"
+
+
+  api:
+    image: cosmtrek/air:v1.61.7
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "8081:8080"
+    command: ["air"]
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_DB=transactions
+      - DATABASE_USER=fidelissauro
+      - DATABASE_PASSWORD=doutorequemtemdoutorado
+      - CACHE_HOST=redis
+      - CACHE_PORT=6379
+    depends_on:
+      - redis
+      - postgres
+      
+volumes:
+  redis_data:
+  postgres_data:
