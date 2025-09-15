@@ -41,6 +41,17 @@ func FindClientTx(ctx context.Context, tx bun.Tx, id string) (*entities.Client, 
 	return cliente, nil
 }
 
+func FindTransaction(ctx context.Context, db *bun.DB, id string, idClient string) (*entities.Transaction, error) {
+	functionName := "FindTransaction"
+	transaction := new(entities.Transaction)
+	err := db.NewSelect().Model(transaction).Where("id = ? AND id_client = ?", id, idClient).Scan(ctx)
+	if err != nil {
+		fmt.Printf("[%s] Error to recover transaction %v:\n", functionName, err)
+		return transaction, err
+	}
+	return transaction, nil
+}
+
 func Process(transaction entities.Transaction) (novoBalance int64, limit int64, inconsistency bool, err error) {
 	functionName := fmt.Sprintf("OperacaoDe%s", transaction.Type)
 
