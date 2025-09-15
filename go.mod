@@ -1,8 +1,9 @@
 module main
 
-go 1.21.4
+go 1.25
 
 require (
+	github.com/ansrivas/fiberprometheus/v2 v2.7.0
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/golang-migrate/migrate/v4 v4.17.0
 	github.com/jackc/pgx/v5 v5.5.3
@@ -13,7 +14,6 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.1.1 // indirect
-	github.com/ansrivas/fiberprometheus/v2 v2.7.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
@@ -40,7 +40,6 @@ require (
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.58.0 // indirect

@@ -35,7 +35,7 @@ services:
 
 
   api:
-    image: cosmtrek/air:v1.61.7
+    image: cosmtrek/air:v1.63.0
     working_dir: /app
     volumes:
       - ./:/app
