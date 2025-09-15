@@ -1,4 +1,4 @@
-package clients
+package transactions
 
 import (
 	"fmt"
