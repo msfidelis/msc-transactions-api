@@ -1,4 +1,4 @@
-package transactions
+package cache
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ var limit int64
 var semLimit bool
 var err error
 
-func NewTransaction(c *fiber.Ctx) error {
+func NewTransactionDualWrite(c *fiber.Ctx) error {
 
 	id := string(c.Request().Header.Peek("id_client"))
 
@@ -37,7 +37,7 @@ func NewTransaction(c *fiber.Ctx) error {
 		Date:        time.Now().UTC().Format(time.RFC3339Nano),
 	}
 
-	_, balance, limit, semLimit, err = services.Process(*transacao)
+	_, balance, limit, semLimit, err = services.ProcessWithDualWriteCache(*transacao)
 
 	if semLimit {
 		return dto.FiberError(c, fiber.StatusUnprocessableEntity, "No limit available")

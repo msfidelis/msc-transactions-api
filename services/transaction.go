@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"main/entities"
 	"main/pkg/database"
+	"main/pkg/redis"
 	"os"
+	"time"
 
 	"github.com/uptrace/bun"
 )
@@ -52,7 +54,7 @@ func FindTransaction(ctx context.Context, db *bun.DB, id string, idClient string
 	return transaction, nil
 }
 
-func Process(transaction entities.Transaction) (novoBalance int64, limit int64, inconsistency bool, err error) {
+func Process(transaction entities.Transaction) (id int64, novoBalance int64, limit int64, inconsistency bool, err error) {
 	functionName := fmt.Sprintf("OperacaoDe%s", transaction.Type)
 
 	ctx := context.Background()
@@ -86,11 +88,11 @@ func Process(transaction entities.Transaction) (novoBalance int64, limit int64, 
 		if novoBalance < -client.Limit {
 			inconsistency = true
 			err = fmt.Errorf("[%s] No limit for client", functionName)
-			return 0, 0, true, err
+			return 0, 0, 0, true, err
 		}
 	default:
 		err = fmt.Errorf("[%s] Invalid transaction type", functionName)
-		return 0, 0, false, err
+		return 0, 0, 0, false, err
 	}
 
 	// Atualizar balance do cliente
@@ -107,7 +109,7 @@ func Process(transaction entities.Transaction) (novoBalance int64, limit int64, 
 
 	if err != nil {
 		fmt.Printf("[%s] Erro ao atualizar o balance do cliente: %v\n", functionName, err)
-		return 0, 0, false, err
+		return 0, 0, 0, false, err
 	}
 
 	_, err = tx.NewInsert().
@@ -118,24 +120,52 @@ func Process(transaction entities.Transaction) (novoBalance int64, limit int64, 
 	// _, err = tx.ExecContext(ctx, "INSERT INTO transactions (id_client, amount, type, description) VALUES (?, ?, ?, ?)", transactionIDClient, transactionAmount, type, transactionDescription)
 	if err != nil {
 		fmt.Printf("[%s] Erro ao inserir a transação: %v\n", functionName, err)
-		return 0, 0, false, err
+		return 0, 0, 0, false, err
 	}
 
 	if os.Getenv("ENV") == "shadow" {
 		err = tx.Rollback()
 		if err != nil {
 			fmt.Printf("[%s] Erro ao fazer rollback da transação: %v\n", functionName, err)
-			return 0, 0, false, err
+			return 0, 0, 0, false, err
 		}
-		return novoBalance, client.Limit, inconsistency, nil
+		return transaction.ID, novoBalance, client.Limit, inconsistency, nil
 	}
 
 	// Commit da Transação
 	err = tx.Commit()
 	if err != nil {
 		fmt.Printf("[%s] Erro ao fazer commit da transação: %v\n", functionName, err)
-		return 0, 0, false, err
+		return 0, 0, 0, false, err
 	}
 
-	return novoBalance, client.Limit, inconsistency, nil
+	return transaction.ID, novoBalance, client.Limit, inconsistency, nil
+}
+
+func ProcessWithDualWriteCache(transaction entities.Transaction) (id int64, novoBalance int64, limit int64, inconsistency bool, err error) {
+	functionName := fmt.Sprintf("OperacaoDe%s", transaction.Type)
+
+	ctx := context.Background()
+
+	idTransaction, novoBalance, limit, inconsistency, err := Process(transaction)
+	if err != nil {
+		fmt.Printf("[%s] Error to process transaction %v:\n", functionName, err)
+		return 0, 0, 0, false, err
+	}
+
+	redisClient := redis.GetClient()
+
+	// Atualizar cache com novo balance
+	err = redisClient.Set(ctx, fmt.Sprintf("balance:%v", transaction.IDClient), fmt.Sprintf("%d", novoBalance), 30*time.Second).Err()
+	if err != nil {
+		fmt.Printf("[%s] Error to update cache %v:\n", functionName, err)
+	}
+
+	// Coloca a Trasaction no cache
+	err = redisClient.Set(ctx, fmt.Sprintf("transaction:%v:%d", transaction.IDClient, idTransaction), fmt.Sprintf("%d|%s|%d|%s|%s", transaction.ID, transaction.IDClient, transaction.Amount, transaction.Type, transaction.Description), 60*time.Second).Err()
+	if err != nil {
+		fmt.Printf("[%s] Error to set transaction in cache %v:\n", functionName, err)
+	}
+
+	return idTransaction, novoBalance, limit, inconsistency, nil
 }
