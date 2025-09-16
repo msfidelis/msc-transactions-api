@@ -1,6 +1,8 @@
 package main
 
 import (
+	"main/routes/balance"
+	"main/routes/cache"
 	"main/routes/healthcheck"
 	"main/routes/statements"
 	"main/routes/transactions"
@@ -41,8 +43,13 @@ func main() {
 	// app.Use(pprof.New())
 
 	app.Get("/statements", statements.GetStatement)
+	app.Get("/balance", balance.GetStatement)
 	app.Post("/transactions", transactions.NewTransaction)
-	app.Get("/statements/:id_transaction", transactions.DetailTransaction)
+	app.Get("/transactions/:id_transaction", transactions.DetailTransaction)
+
+	// Cache Examples
+	app.Post("/cache/dualwrite/transactions", cache.NewTransactionDualWrite)
+
 	app.Get("/healthcheck", healthcheck.Probe)
 	app.Listen(":8080")
 }
