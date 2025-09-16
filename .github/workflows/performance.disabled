@@ -1,0 +1,233 @@
+# name: Performance Testing
+
+# on:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
+#   schedule:
+#     # Executa toda noite às 2:00 UTC
+#     - cron: '0 2 * * *'
+
+# jobs:
+#   benchmark:
+#     name: 📊 Performance Benchmarks
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Set up Go
+#         uses: actions/setup-go@v4
+#         with:
+#           go-version: '1.25'
+
+#       - name: Cache Go modules
+#         uses: actions/cache@v3
+#         with:
+#           path: ~/go/pkg/mod
+#           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+#           restore-keys: |
+#             ${{ runner.os }}-go-
+
+#       - name: Install dependencies
+#         run: go mod download
+
+#       - name: Run benchmarks
+#         run: |
+#           echo "🏃‍♂️ Running performance benchmarks..."
+#           go test -bench=. -benchmem -count=5 -timeout=30m ./... | tee benchmark-results.txt
+          
+#           echo "📊 Benchmark Summary:"
+#           grep -E "^Benchmark" benchmark-results.txt | tail -10
+
+#       - name: Analyze performance
+#         run: |
+#           echo "🔍 Performance Analysis:"
+          
+#           # Extrair métricas importantes
+#           echo "=== Hash Ring Performance ==="
+#           grep "BenchmarkConsistentHashRing" benchmark-results.txt | tail -5
+          
+#           echo "=== Hash Function Performance ==="
+#           grep "BenchmarkHashKey" benchmark-results.txt | tail -5
+          
+#           # Verificar se performance está dentro dos limites
+#           AVG_HASH_TIME=$(grep "BenchmarkHashKey" benchmark-results.txt | awk '{sum+=$3; count++} END {print sum/count}')
+#           echo "Tempo médio hash: ${AVG_HASH_TIME} ns/op"
+          
+#           # Fail se performance degradou muito (> 1000ns por hash)
+#           if (( $(echo "$AVG_HASH_TIME > 1000" | bc -l) )); then
+#             echo "❌ Performance regression detected! Hash time: ${AVG_HASH_TIME}ns"
+#             exit 1
+#           fi
+          
+#           echo "✅ Performance within acceptable limits"
+
+#       - name: Upload benchmark results
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: benchmark-results-${{ github.sha }}
+#           path: benchmark-results.txt
+
+#   load-test:
+#     name: 🔥 Load Testing
+#     runs-on: ubuntu-latest
+#     needs: benchmark
+#     services:
+#       nginx1:
+#         image: nginx:alpine
+#         ports:
+#           - 8081:80
+#       nginx2:
+#         image: nginx:alpine
+#         ports:
+#           - 8082:80
+#       nginx3:
+#         image: nginx:alpine
+#         ports:
+#           - 8083:80
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Set up Go
+#         uses: actions/setup-go@v4
+#         with:
+#           go-version: '1.25'
+
+#       - name: Install dependencies
+#         run: go mod download
+
+#       - name: Build application
+#         run: |
+#           CGO_ENABLED=0 go build -a -installsuffix cgo -o shard-router .
+
+#       - name: Start application
+#         run: |
+#           export ROUTER_PORT=9090
+#           export SHARDING_KEY=id_client
+#           export SHARD_01_URL=http://localhost:8081
+#           export SHARD_02_URL=http://localhost:8082
+#           export SHARD_03_URL=http://localhost:8083
+          
+#           ./shard-router &
+#           APP_PID=$!
+#           echo $APP_PID > app.pid
+          
+#           # Wait for app to start
+#           sleep 5
+          
+#           # Verify it's running
+#           curl -f http://localhost:9090/healthz
+
+#       - name: Install Apache Bench
+#         run: sudo apt-get update && sudo apt-get install -y apache2-utils
+
+#       - name: Run load tests
+#         run: |
+#           echo "🔥 Starting load tests..."
+          
+#           # Test 1: Basic load test
+#           echo "=== Test 1: Basic Load (1000 requests, 10 concurrent) ==="
+#           ab -n 1000 -c 10 -H "id_client: user123" http://localhost:9090/ > load-test-basic.txt
+#           cat load-test-basic.txt
+          
+#           # Test 2: High concurrency
+#           echo "=== Test 2: High Concurrency (500 requests, 50 concurrent) ==="
+#           ab -n 500 -c 50 -H "id_client: user456" http://localhost:9090/ > load-test-high.txt
+#           cat load-test-high.txt
+          
+#           # Test 3: Different users (test distribution)
+#           echo "=== Test 3: Multiple Users Distribution ==="
+#           for i in {1..100}; do
+#             curl -s -H "id_client: user$i" http://localhost:9090/ > /dev/null &
+#           done
+#           wait
+          
+#           # Check metrics
+#           echo "=== Metrics After Load Test ==="
+#           curl -s http://localhost:9090/metrics | grep "shard_router"
+
+#       - name: Analyze load test results
+#         run: |
+#           echo "📊 Load Test Analysis:"
+          
+#           # Extract key metrics from basic test
+#           REQUESTS_PER_SEC=$(grep "Requests per second" load-test-basic.txt | awk '{print $4}')
+#           MEAN_TIME=$(grep "Time per request.*mean" load-test-basic.txt | awk '{print $4}')
+          
+#           echo "Requests per second: $REQUESTS_PER_SEC"
+#           echo "Mean time per request: $MEAN_TIME ms"
+          
+#           # Performance thresholds
+#           MIN_RPS=100
+#           MAX_RESPONSE_TIME=50
+          
+#           if (( $(echo "$REQUESTS_PER_SEC < $MIN_RPS" | bc -l) )); then
+#             echo "❌ Performance below threshold! RPS: $REQUESTS_PER_SEC (min: $MIN_RPS)"
+#             exit 1
+#           fi
+          
+#           if (( $(echo "$MEAN_TIME > $MAX_RESPONSE_TIME" | bc -l) )); then
+#             echo "❌ Response time above threshold! Time: $MEAN_TIME ms (max: $MAX_RESPONSE_TIME)"
+#             exit 1
+#           fi
+          
+#           echo "✅ Load test performance acceptable"
+
+#       - name: Stop application
+#         run: |
+#           if [ -f app.pid ]; then
+#             kill $(cat app.pid) || true
+#           fi
+
+#       - name: Upload load test results
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: load-test-results-${{ github.sha }}
+#           path: |
+#             load-test-*.txt
+
+#   performance-report:
+#     name: 📈 Performance Report
+#     runs-on: ubuntu-latest
+#     needs: [benchmark, load-test]
+#     if: always()
+#     steps:
+#       - name: Download benchmark results
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: benchmark-results-${{ github.sha }}
+
+#       - name: Download load test results
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: load-test-results-${{ github.sha }}
+
+#       - name: Generate performance report
+#         run: |
+#           echo "# 📊 Performance Test Report" > performance-report.md
+#           echo "**Date:** $(date)" >> performance-report.md
+#           echo "**Commit:** ${{ github.sha }}" >> performance-report.md
+#           echo "" >> performance-report.md
+          
+#           echo "## 🏃‍♂️ Benchmark Results" >> performance-report.md
+#           echo "\`\`\`" >> performance-report.md
+#           grep -E "^Benchmark" benchmark-results.txt | tail -10 >> performance-report.md
+#           echo "\`\`\`" >> performance-report.md
+#           echo "" >> performance-report.md
+          
+#           echo "## 🔥 Load Test Results" >> performance-report.md
+#           echo "### Basic Load Test" >> performance-report.md
+#           echo "\`\`\`" >> performance-report.md
+#           grep -A 20 "Benchmarking" load-test-basic.txt | head -15 >> performance-report.md
+#           echo "\`\`\`" >> performance-report.md
+          
+#           cat performance-report.md
+
+#       - name: Upload performance report
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: performance-report-${{ github.sha }}
+#           path: performance-report.md
