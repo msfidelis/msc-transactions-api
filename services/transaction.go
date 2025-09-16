@@ -139,6 +139,13 @@ func Process(transaction entities.Transaction) (id int64, novoBalance int64, lim
 		return 0, 0, 0, false, err
 	}
 
+	// Zerar o balance em cache
+	redisClient := redis.GetClient()
+	err = redisClient.Del(ctx, fmt.Sprintf("balance:%v", transaction.IDClient)).Err()
+	if err != nil {
+		fmt.Printf("[%s] Error to clear balance cache %v:\n", functionName, err)
+	}
+	fmt.Printf("[%s] Clear balance cache for client %v:\n", functionName, transaction.IDClient)
 	return transaction.ID, novoBalance, client.Limit, inconsistency, nil
 }
 
@@ -156,15 +163,15 @@ func ProcessWithDualWriteCache(transaction entities.Transaction) (id int64, novo
 	redisClient := redis.GetClient()
 
 	// Atualizar cache com novo balance
-	err = redisClient.Set(ctx, fmt.Sprintf("balance:%v", transaction.IDClient), fmt.Sprintf("%d", novoBalance), 30*time.Second).Err()
+	err = redisClient.Set(ctx, fmt.Sprintf("balance:%v", transaction.IDClient), fmt.Sprintf("%d", novoBalance), 300*time.Second).Err()
 	if err != nil {
 		fmt.Printf("[%s] Error to update cache %v:\n", functionName, err)
 	}
 
 	// Coloca a Trasaction no cache
-	err = redisClient.Set(ctx, fmt.Sprintf("transaction:%v:%d", transaction.IDClient, idTransaction), fmt.Sprintf("%d|%s|%d|%s|%s", transaction.ID, transaction.IDClient, transaction.Amount, transaction.Type, transaction.Description), 60*time.Second).Err()
+	err = redisClient.Set(ctx, fmt.Sprintf("transaction:%v:%d", transaction.IDClient, idTransaction), fmt.Sprintf("%d|%s|%d|%s|%s", transaction.ID, transaction.IDClient, transaction.Amount, transaction.Type, transaction.Description), 600*time.Second).Err()
 	if err != nil {
-		fmt.Printf("[%s] Error to set transaction in cache %v:\n", functionName, err)
+		fmt.Printf("[%s] Error to set transaction from cache %v:\n", functionName, err)
 	}
 
 	return idTransaction, novoBalance, limit, inconsistency, nil

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"main/dto"
 	"main/entities"
-	"main/pkg/database"
 	"main/services"
 	"time"
 
@@ -58,23 +57,6 @@ func NewTransactionDualWrite(c *fiber.Ctx) error {
 		Limit:   limit,
 		Balance: balance,
 	}
+
 	return c.Status(fiber.StatusOK).JSON(response)
-}
-
-func DetailTransaction(c *fiber.Ctx) error {
-	IDClient := string(c.Request().Header.Peek("id_client"))
-	IDTransaction := c.Params("id_transaction")
-
-	db := database.GetDB()
-
-	client, err := services.FindClient(c.Context(), db, IDClient)
-	if err != nil {
-		return dto.FiberError(c, fiber.StatusInternalServerError, "Client not found")
-	}
-
-	transaction, err := services.FindTransaction(c.Context(), db, IDTransaction, client.ID)
-	if err != nil {
-		return dto.FiberError(c, fiber.StatusNotFound, "Transaction not found")
-	}
-	return c.JSON(transaction)
 }
