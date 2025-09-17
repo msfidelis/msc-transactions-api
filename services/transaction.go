@@ -37,7 +37,10 @@ func FindClientTx(ctx context.Context, tx bun.Tx, id string) (*entities.Client, 
 	err := tx.NewSelect().Model(cliente).Where("id_client = ?", id).Scan(ctx)
 	if err != nil {
 		fmt.Printf("[%s] Error to recover client %v:\n", functionName, err)
-		tx.Rollback()
+		err := tx.Rollback()
+		if err != nil {
+			fmt.Printf("[%s] Erro ao fazer rollback da transação: %v\n", functionName, err)
+		}
 		return cliente, err
 	}
 	return cliente, nil
@@ -69,7 +72,10 @@ func Process(transaction entities.Transaction) (id int64, novoBalance int64, lim
 	// Garantir que um rollback será feito em caso de erro
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			err := tx.Rollback()
+			if err != nil {
+				fmt.Printf("[%s] Erro ao fazer rollback da transação: %v\n", functionName, err)
+			}
 		}
 	}()
 

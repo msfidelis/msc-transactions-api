@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"main/routes/balance"
 	"main/routes/cache"
 	"main/routes/healthcheck"
@@ -51,5 +52,5 @@ func main() {
 	app.Post("/cache/dualwrite/transactions", cache.NewTransactionDualWrite)
 
 	app.Get("/healthcheck", healthcheck.Probe)
-	app.Listen(":8080")
+	log.Fatal(app.Listen(":8080"))
 }
