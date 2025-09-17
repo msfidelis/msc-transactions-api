@@ -16,7 +16,6 @@ import (
 var onceDB sync.Once
 var onceDBPGX sync.Once
 var onceBun sync.Once
-var pgxPoolInstance *sql.DB
 var pgxInstance *sql.DB
 var dbInstance *sql.DB
 var BunInstance *bun.DB
