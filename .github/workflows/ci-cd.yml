@@ -9,7 +9,7 @@ on:
     types: [ published ]
 
 env:
-  GO_VERSION: '1.25'
+  GO_VERSION: '1.21'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -49,12 +49,11 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-      - name: Install golangci-lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
-
       - name: Run golangci-lint
-        run: $(go env GOPATH)/bin/golangci-lint run --timeout=5m
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.60.1
+          args: --timeout=5m
 
   # Job de Testes Unitários
   test:
