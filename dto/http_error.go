@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/gofiber/fiber/v2"
+import fiber "github.com/gofiber/fiber/v2"
 
 type HttpError struct {
 	Message string `json:"message"`

@@ -4,7 +4,7 @@ import (
 	"main/dto"
 	"main/services"
 
-	"github.com/gofiber/fiber/v2"
+	fiber "github.com/gofiber/fiber/v2"
 )
 
 func GetStatement(c *fiber.Ctx) error {

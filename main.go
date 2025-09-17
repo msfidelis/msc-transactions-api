@@ -8,11 +8,11 @@ import (
 	"main/routes/transactions"
 	"main/routines"
 
-	"github.com/gofiber/fiber/v2"
+	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	jsoniter "github.com/json-iterator/go"
 
-	"github.com/ansrivas/fiberprometheus/v2"
+	fiberprometheus "github.com/ansrivas/fiberprometheus/v2"
 )
 
 func main() {
