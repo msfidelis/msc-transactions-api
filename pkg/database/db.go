@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -56,13 +57,30 @@ func GetPGX() *sql.DB {
 		var err error
 		config, err := pgx.ParseConfig(getDBUrl())
 		if err != nil {
-			panic(err)
+			log.Fatalf("Error parsing database config: %v", err)
 		}
+
+		// Configurações de timeout e pool de conexão
 		config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+		config.ConnectTimeout = 30 * time.Second
+
+		// Log da configuração para debug
+		log.Printf("Connecting to PostgreSQL: %s:%d", config.Host, config.Port)
 
 		pgxInstance = stdlib.OpenDB(*config)
-		pgxInstance.SetMaxOpenConns(10)
-		pgxInstance.SetMaxIdleConns(10)
+
+		// Pool de conexões mais conservador
+		pgxInstance.SetMaxOpenConns(5)
+		pgxInstance.SetMaxIdleConns(2)
+		pgxInstance.SetConnMaxLifetime(30 * time.Minute)
+		pgxInstance.SetConnMaxIdleTime(5 * time.Minute)
+
+		// Testa a conexão
+		if err = pgxInstance.Ping(); err != nil {
+			log.Fatalf("Failed to ping database: %v", err)
+		}
+
+		log.Printf("Successfully connected to PostgreSQL")
 	})
 	return pgxInstance
 }
@@ -74,7 +92,16 @@ func getDBUrl() string {
 	port := os.Getenv("DATABASE_PORT")
 	schema := os.Getenv("DATABASE_DB")
 
-	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, pass, host, port, schema)
+	// Log dos valores para debug
+	log.Printf("Database connection config - Host: %s, Port: %s, User: %s, DB: %s", host, port, user, schema)
+
+	// String de conexão com parâmetros de timeout e configurações de rede
+	connectionString := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable&connect_timeout=30&statement_timeout=30000&idle_in_transaction_session_timeout=30000",
+		user, pass, host, port, schema,
+	)
+
+	return connectionString
 }
 
 func GetDB() *bun.DB {

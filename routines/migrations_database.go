@@ -17,7 +17,7 @@ func DatabaseMigration() {
 
 	// Aguarda mais tempo para o PostgreSQL estar totalmente pronto
 	fmt.Printf("[%s] Aguardando PostgreSQL estar pronto...\n", consumerName)
-	time.Sleep(30 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	// Retry logic para conexão com o banco
 	var db *sql.DB
