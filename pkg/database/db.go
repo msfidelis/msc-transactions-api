@@ -61,8 +61,8 @@ func GetPGX() *sql.DB {
 		config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
 		pgxInstance = stdlib.OpenDB(*config)
-		pgxInstance.SetMaxOpenConns(100)
-		pgxInstance.SetMaxIdleConns(100)
+		pgxInstance.SetMaxOpenConns(10)
+		pgxInstance.SetMaxIdleConns(10)
 	})
 	return pgxInstance
 }
