@@ -8,10 +8,8 @@ import (
 	"main/services"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	fiber "github.com/gofiber/fiber/v2"
 )
-
-var functionName = "NewTransaction"
 
 var request dto.TransactionRequest
 

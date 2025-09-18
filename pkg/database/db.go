@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -15,9 +15,7 @@ import (
 
 var onceDB sync.Once
 var onceDBPGX sync.Once
-var onceDBPGXPool sync.Once
 var onceBun sync.Once
-var pgxPoolInstance *sql.DB
 var pgxInstance *sql.DB
 var dbInstance *sql.DB
 var BunInstance *bun.DB
@@ -63,8 +61,8 @@ func GetPGX() *sql.DB {
 		config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
 		pgxInstance = stdlib.OpenDB(*config)
-		pgxInstance.SetMaxOpenConns(100)
-		pgxInstance.SetMaxIdleConns(100)
+		pgxInstance.SetMaxOpenConns(10)
+		pgxInstance.SetMaxIdleConns(10)
 	})
 	return pgxInstance
 }

@@ -5,7 +5,7 @@ import (
 	"main/pkg/database"
 	"time"
 
-	"github.com/golang-migrate/migrate/v4"
+	migrate "github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Driver do banco de dados
 	_ "github.com/golang-migrate/migrate/v4/source/file"
