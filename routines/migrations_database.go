@@ -1,6 +1,7 @@
 package routines
 
 import (
+	"database/sql"
 	"fmt"
 	"main/pkg/database"
 	"time"
@@ -12,28 +13,69 @@ import (
 )
 
 func DatabaseMigration() {
-
 	consumerName := "DatabaseMigration"
 
-	time.Sleep(10 * time.Second)
+	// Aguarda mais tempo para o PostgreSQL estar totalmente pronto
+	fmt.Printf("[%s] Aguardando PostgreSQL estar pronto...\n", consumerName)
+	time.Sleep(30 * time.Second)
 
-	db := database.GetPGX()
+	// Retry logic para conexão com o banco
+	var db *sql.DB
+	var err error
+	maxRetries := 10
 
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		fmt.Printf("[%s] Erro ao criar a config com o postgres %v:\n", consumerName, err)
+	for i := 0; i < maxRetries; i++ {
+		db = database.GetPGX()
+		if db != nil {
+			// Testa a conexão
+			if err = db.Ping(); err == nil {
+				fmt.Printf("[%s] Conexão com PostgreSQL estabelecida na tentativa %d\n", consumerName, i+1)
+				break
+			}
+			fmt.Printf("[%s] Falha na tentativa %d de conectar: %v\n", consumerName, i+1, err)
+		}
+
+		if i < maxRetries-1 {
+			time.Sleep(5 * time.Second)
+		}
 	}
 
+	if db == nil || err != nil {
+		fmt.Printf("[%s] Falha ao conectar com PostgreSQL após %d tentativas. Último erro: %v\n", consumerName, maxRetries, err)
+		return
+	}
+
+	// Configura o driver de migração com timeout
+	driver, err := postgres.WithInstance(db, &postgres.Config{
+		MigrationsTable: "schema_migrations",
+		DatabaseName:    "transactions",
+	})
+	if err != nil {
+		fmt.Printf("[%s] Erro ao criar a config com o postgres: %v\n", consumerName, err)
+		return
+	}
+
+	// Cria a instância de migração
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations", // Certifique-se de que este caminho está correto e acessível
-		"postgres", driver)
+		"file://migrations",
+		"postgres",
+		driver,
+	)
 	if err != nil {
-		fmt.Printf("[%s] Erro criar a instância de migração %v:\n", consumerName, err)
+		fmt.Printf("[%s] Erro ao criar a instância de migração: %v\n", consumerName, err)
+		return
 	}
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		fmt.Printf("[%s] Erro ao aplicar as migrations %v:\n", consumerName, err)
+	// Aplica as migrações com tratamento de erro adequado
+	fmt.Printf("[%s] Aplicando migrações...\n", consumerName)
+	if err := m.Up(); err != nil {
+		if err == migrate.ErrNoChange {
+			fmt.Printf("[%s] Nenhuma migração pendente\n", consumerName)
+		} else {
+			fmt.Printf("[%s] Erro ao aplicar as migrações: %v\n", consumerName, err)
+			return
+		}
 	}
 
-	fmt.Printf("[%s] Migrations aplicadas com sucesso:\n", consumerName)
+	fmt.Printf("[%s] Migrações aplicadas com sucesso\n", consumerName)
 }
