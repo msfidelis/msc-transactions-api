@@ -60,16 +60,13 @@ func GetPGX() *sql.DB {
 			log.Fatalf("Error parsing database config: %v", err)
 		}
 
-		// Configurações de timeout e pool de conexão
 		config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 		config.ConnectTimeout = 30 * time.Second
 
-		// Log da configuração para debug
 		log.Printf("Connecting to PostgreSQL: %s:%d", config.Host, config.Port)
 
 		pgxInstance = stdlib.OpenDB(*config)
 
-		// Pool de conexões mais conservador
 		pgxInstance.SetMaxOpenConns(5)
 		pgxInstance.SetMaxIdleConns(2)
 		pgxInstance.SetConnMaxLifetime(30 * time.Minute)
