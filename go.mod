@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/ansrivas/fiberprometheus/v2 v2.14.0
-	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/gofiber/fiber/v2 v2.52.10
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/json-iterator/go v1.1.12
